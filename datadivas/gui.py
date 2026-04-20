@@ -98,6 +98,9 @@ class CapstoneMapperApp:
         # Default to dark theme on startup
         self.current_theme = "dark"
         
+        # Store references to UI elements for theme switching
+        self.ui_elements = {}
+        
         # Configure main window
         master.title("Capstone Placement App")
         master.geometry("980x760")
@@ -111,6 +114,7 @@ class CapstoneMapperApp:
             fg=self.themes[self.current_theme]["text"],
         )
         header.pack(padx=16, pady=(12, 6))
+        self.ui_elements["header"] = header
 
         subtitle = tk.Label(
             master,
@@ -120,15 +124,19 @@ class CapstoneMapperApp:
             fg=self.themes[self.current_theme]["subtitle_fg"],
         )
         subtitle.pack(padx=16, pady=(0, 16))
+        self.ui_elements["subtitle"] = subtitle
 
         frame = tk.Frame(master, bg=self.themes[self.current_theme]["bg"])
         frame.pack(fill="both", expand=True, padx=16, pady=6)
+        self.ui_elements["main_frame"] = frame
 
         left = tk.Frame(frame, bg=self.themes[self.current_theme]["panel"], bd=0, relief="flat")
         left.pack(side="left", fill="both", expand=True, padx=(0, 8), pady=2)
+        self.ui_elements["left_frame"] = left
 
         right = tk.Frame(frame, bg=self.themes[self.current_theme]["panel"], bd=0, relief="flat")
         right.pack(side="right", fill="both", expand=True, pady=2)
+        self.ui_elements["right_frame"] = right
 
         self._build_input_panel(left)
         self._build_output_panel(right)
@@ -150,6 +158,7 @@ class CapstoneMapperApp:
             fg=self.themes[self.current_theme]["accent"],
         )
         label.pack(anchor="w", padx=12, pady=(12, 6))
+        self.ui_elements["projects_label"] = label
 
         self.projects_text = scrolledtext.ScrolledText(
             container,
@@ -164,9 +173,11 @@ class CapstoneMapperApp:
         )
         self.projects_text.pack(fill="both", expand=True, padx=12)
         self.projects_text.insert("1.0", SAMPLE_PROJECTS)
+        self.ui_elements["projects_text"] = self.projects_text
 
         loader_frame = tk.Frame(container, bg=self.themes[self.current_theme]["panel"])
         loader_frame.pack(fill="x", padx=12, pady=(8, 0))
+        self.ui_elements["loader_frame"] = loader_frame
 
         project_import_button = tk.Button(
             loader_frame,
@@ -174,20 +185,22 @@ class CapstoneMapperApp:
             command=self.load_projects_csv,
             bg=self.themes[self.current_theme]["accent"],
             fg=self.themes[self.current_theme]["text"],
-            activebackground=self.themes[self.current_theme]["active_bg"],
             relief="flat",
             padx=10,
             pady=6,
         )
         project_import_button.pack(side="left", padx=(0, 6))
+        self.ui_elements["project_import_button"] = project_import_button
 
-        tk.Label(
+        students_label = tk.Label(
             container,
             text="Student Rankings",
             font=("Segoe UI", 12, "bold"),
             bg=self.themes[self.current_theme]["panel"],
             fg=self.themes[self.current_theme]["accent"],
-        ).pack(anchor="w", padx=12, pady=(16, 6))
+        )
+        students_label.pack(anchor="w", padx=12, pady=(16, 6))
+        self.ui_elements["students_label"] = students_label
 
         self.students_text = scrolledtext.ScrolledText(
             container,
@@ -202,9 +215,11 @@ class CapstoneMapperApp:
         )
         self.students_text.pack(fill="both", expand=True, padx=12)
         self.students_text.insert("1.0", SAMPLE_STUDENTS)
+        self.ui_elements["students_text"] = self.students_text
 
         student_import_frame = tk.Frame(container, bg=self.themes[self.current_theme]["panel"])
         student_import_frame.pack(fill="x", padx=12, pady=(8, 0))
+        self.ui_elements["student_import_frame"] = student_import_frame
 
         student_import_button = tk.Button(
             student_import_frame,
@@ -212,15 +227,16 @@ class CapstoneMapperApp:
             command=self.load_students_csv,
             bg=self.themes[self.current_theme]["accent"],
             fg=self.themes[self.current_theme]["text"],
-            activebackground=self.themes[self.current_theme]["active_bg"],
             relief="flat",
             padx=10,
             pady=6,
         )
         student_import_button.pack(side="left")
+        self.ui_elements["student_import_button"] = student_import_button
 
         button_frame = tk.Frame(container, bg=self.themes[self.current_theme]["panel"])
         button_frame.pack(fill="x", padx=12, pady=14)
+        self.ui_elements["button_frame"] = button_frame
 
         assign_button = tk.Button(
             button_frame,
@@ -228,13 +244,13 @@ class CapstoneMapperApp:
             command=self.run_assignment,
             bg=self.themes[self.current_theme]["accent"],
             fg=self.themes[self.current_theme]["text"],
-            activebackground=self.themes[self.current_theme]["active_bg"],
             width=16,
             relief="flat",
             padx=10,
             pady=8,
         )
         assign_button.pack(side="left", padx=(0, 8))
+        self.ui_elements["assign_button"] = assign_button
 
         clear_button = tk.Button(
             button_frame,
@@ -242,13 +258,13 @@ class CapstoneMapperApp:
             command=self.clear_output,
             bg=self.themes[self.current_theme]["button_bg"],
             fg=self.themes[self.current_theme]["text"],
-            activebackground=self.themes[self.current_theme]["button_active"],
             width=14,
             relief="flat",
             padx=10,
             pady=8,
         )
         clear_button.pack(side="left", padx=(0, 8))
+        self.ui_elements["clear_button"] = clear_button
 
         save_button = tk.Button(
             button_frame,
@@ -256,13 +272,27 @@ class CapstoneMapperApp:
             command=self.save_csv,
             bg=self.themes[self.current_theme]["button_bg"],
             fg=self.themes[self.current_theme]["text"],
-            activebackground=self.themes[self.current_theme]["button_active"],
             width=12,
             relief="flat",
             padx=10,
             pady=8,
         )
         save_button.pack(side="left")
+        self.ui_elements["save_button"] = save_button
+
+        theme_button = tk.Button(
+            button_frame,
+            text="Light Mode",
+            command=self.toggle_theme,
+            bg=self.themes[self.current_theme]["button_bg"],
+            fg=self.themes[self.current_theme]["text"],
+            width=12,
+            relief="flat",
+            padx=10,
+            pady=8,
+        )
+        theme_button.pack(side="left", padx=(8, 0))
+        self.ui_elements["theme_button"] = theme_button
 
     def _build_output_panel(self, container: tk.Frame) -> None:
         """Build the right output panel for displaying assignment results.
@@ -281,6 +311,7 @@ class CapstoneMapperApp:
             fg=self.themes[self.current_theme]["accent"],
         )
         label.pack(anchor="w", padx=12, pady=(12, 6))
+        self.ui_elements["output_label"] = label
 
         self.output_text = scrolledtext.ScrolledText(
             container,
@@ -295,6 +326,7 @@ class CapstoneMapperApp:
             state="disabled",
         )
         self.output_text.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        self.ui_elements["output_text"] = self.output_text
 
     def set_output(self, content: str) -> None:
         """Update the output text area with new content.
@@ -454,7 +486,81 @@ class CapstoneMapperApp:
     def toggle_theme(self) -> None:
         """Toggle between dark and light themes.
         
-        Switches the application color scheme from dark to light or vice versa.
-        This method is a placeholder for theme switching functionality.
+        Switches the application color scheme from dark to light or vice versa,
+        updating all UI elements to use the new theme colors.
         """
-        self.current_theme = "light" if self.current_theme == "dark" else "dark"
+        try:
+            # Switch theme
+            self.current_theme = "light" if self.current_theme == "dark" else "dark"
+            theme = self.themes[self.current_theme]
+            
+            # Update main window
+            self.master.configure(bg=theme["bg"])
+            
+            # Update main UI elements
+            if "header" in self.ui_elements:
+                self.ui_elements["header"].configure(bg=theme["bg"], fg=theme["text"])
+            if "subtitle" in self.ui_elements:
+                self.ui_elements["subtitle"].configure(bg=theme["bg"], fg=theme["subtitle_fg"])
+            if "main_frame" in self.ui_elements:
+                self.ui_elements["main_frame"].configure(bg=theme["bg"])
+            if "left_frame" in self.ui_elements:
+                self.ui_elements["left_frame"].configure(bg=theme["panel"])
+            if "right_frame" in self.ui_elements:
+                self.ui_elements["right_frame"].configure(bg=theme["panel"])
+            
+            # Update input panel elements
+            if "projects_label" in self.ui_elements:
+                self.ui_elements["projects_label"].configure(bg=theme["panel"], fg=theme["accent"])
+            if "projects_text" in self.ui_elements:
+                self.ui_elements["projects_text"].configure(bg=theme["input_bg"], fg=theme["input_fg"])
+            if "loader_frame" in self.ui_elements:
+                self.ui_elements["loader_frame"].configure(bg=theme["panel"])
+            if "project_import_button" in self.ui_elements:
+                self.ui_elements["project_import_button"].configure(
+                    bg=theme["accent"], fg=theme["text"]
+                )
+            if "students_label" in self.ui_elements:
+                self.ui_elements["students_label"].configure(bg=theme["panel"], fg=theme["accent"])
+            if "students_text" in self.ui_elements:
+                self.ui_elements["students_text"].configure(bg=theme["input_bg"], fg=theme["input_fg"])
+            if "student_import_frame" in self.ui_elements:
+                self.ui_elements["student_import_frame"].configure(bg=theme["panel"])
+            if "student_import_button" in self.ui_elements:
+                self.ui_elements["student_import_button"].configure(
+                    bg=theme["accent"], fg=theme["text"]
+                )
+            if "button_frame" in self.ui_elements:
+                self.ui_elements["button_frame"].configure(bg=theme["panel"])
+            if "assign_button" in self.ui_elements:
+                self.ui_elements["assign_button"].configure(
+                    bg=theme["accent"], fg=theme["text"]
+                )
+            if "clear_button" in self.ui_elements:
+                self.ui_elements["clear_button"].configure(
+                    bg=theme["button_bg"], fg=theme["text"]
+                )
+            if "save_button" in self.ui_elements:
+                self.ui_elements["save_button"].configure(
+                    bg=theme["button_bg"], fg=theme["text"]
+                )
+            
+            # Update theme button (text and colors)
+            button_text = "Dark Mode" if self.current_theme == "light" else "Light Mode"
+            if "theme_button" in self.ui_elements:
+                self.ui_elements["theme_button"].configure(
+                    text=button_text,
+                    bg=theme["button_bg"], 
+                    fg=theme["text"]
+                )
+            
+            # Update output panel elements
+            if "output_label" in self.ui_elements:
+                self.ui_elements["output_label"].configure(bg=theme["panel"], fg=theme["accent"])
+            if "output_text" in self.ui_elements:
+                self.ui_elements["output_text"].configure(bg=theme["output_bg"], fg=theme["text"])
+                
+        except Exception as e:
+            # If there's an error, show it and revert the theme change
+            self.current_theme = "dark" if self.current_theme == "light" else "dark"
+            messagebox.showerror("Theme Error", f"Error toggling theme: {str(e)}")

@@ -210,10 +210,10 @@ def assign_students_to_projects(
         if student in project_assignments[project] and len(project_assignments[project]) <= project_capacities[project]:
             continue
 
-    # Final validation: enforce minimum team size of 4 students per project.
-    # If a project has fewer than 4 students, redistribute them to other projects.
+    # Final validation: enforce minimum team size of 4 students per project only for projects with capacity >= 4.
+    # If a project has capacity >= 4 but fewer than 4 students, redistribute them to other projects.
     for project, assigned_students in list(project_assignments.items()):
-        if 0 < len(assigned_students) < 4:
+        if project_capacities[project] >= 4 and 0 < len(assigned_students) < 4:
             for student in list(assigned_students):
                 project_assignments[project].remove(student)
                 current_index = extended_rankings[student].index(project)
