@@ -49,6 +49,20 @@ class AssignmentTests(unittest.TestCase):
         self.assertEqual(assigned.count("Project A"), 2)
         self.assertTrue(any(project is None or project == "Project B" for project in assigned))
 
+    def test_minimum_capacity_enforcement(self):
+        students = {
+            "Alice": ["Project A"],
+            "Bob": ["Project A"],
+            "Carmen": ["Project A"],
+            "Diana": ["Project A"],
+            "Eve": ["Project A"],
+        }
+        projects = {"Project A": 4}
+        assignments = assign_students_to_projects(students, projects)
+        assigned = [assignments[name] for name in students]
+        self.assertEqual(assigned.count("Project A"), 4)
+        self.assertEqual(assigned.count(None), 1)
+
     def test_assign_students_unassigned_when_no_space(self):
         students = {"Alice": ["Project A"], "Bob": ["Project A"]}
         projects = {"Project A": 0}
