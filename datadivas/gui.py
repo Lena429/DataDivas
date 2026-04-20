@@ -4,12 +4,15 @@ from tkinter import filedialog, messagebox, scrolledtext
 
 from .assignment import AssignmentError, assign_students_to_projects, build_report, get_rank, parse_projects, parse_student_rankings
 
+# Sample data for demonstration purposes. Shows the expected format for
+# project capacities and student rankings.
 SAMPLE_PROJECTS = """Project Apollo,4
 Project Atlas,4
 Project Beacon,5
 Project Cypress,4
 """
 
+# Sample student data showing ranking format: "Student Name: Project 1, Project 2, ..."
 SAMPLE_STUDENTS = """Alice: Project Apollo, Project Atlas, Project Beacon
 Ben: Project Atlas, Project Cypress, Project Apollo
 Carmen: Project Beacon, Project Apollo, Project Atlas
@@ -18,6 +21,18 @@ Diana: Project Cypress, Project Atlas, Project Apollo
 
 
 def _choose_header_key(field_names, candidates):
+    """Find the correct CSV column header from a list of candidates.
+    
+    Performs case-insensitive matching to handle variations in CSV column names.
+    For example, 'project', 'Project', 'PROJECT', and 'project name' would all match.
+    
+    Args:
+        field_names: List of actual CSV column headers.
+        candidates: List of possible header names to search for (in priority order).
+    
+    Returns:
+        The actual column header that matches a candidate, or None if no match found.
+    """
     normalized = {name.strip().lower(): name for name in field_names if name}
     for candidate in candidates:
         if candidate in normalized:
@@ -26,13 +41,29 @@ def _choose_header_key(field_names, candidates):
 
 
 class CapstoneMapperApp:
-    """Tkinter desktop application for project assignment mapping."""
+    """Tkinter desktop application for project assignment mapping.
+    
+    Provides a user-friendly GUI for entering project capacities and student rankings,
+    running the assignment algorithm, and exporting results to CSV. Supports both
+    dark and light themes.
+    """
 
     def __init__(self, master: tk.Tk) -> None:
+        """Initialize the GUI application.
+        
+        Sets up the window, creates input and output panels, initializes theme colors,
+        and configures all UI elements.
+        
+        Args:
+            master: The root Tkinter window.
+        """
         self.master = master
+        # Store last assignment results for CSV export
         self.last_assignments: Dict[str, str | None] = {}
+        # Store parsed student rankings for reference when building export
         self.last_students: Dict[str, List[str]] = {}
-        #dark light modes
+        
+        # Define color schemes for dark and light themes
         self.themes = {
             "dark": {
                 "bg": "#111111",
@@ -45,9 +76,10 @@ class CapstoneMapperApp:
                 "button_bg": "#333333",
                 "button_active": "#4D4D4D",
                 "output_bg": "#121212",
+                # Light orange highlight for active buttons in dark mode
                 "active_bg": "#FFB340"
             },
-            "light": {
+            "light": {  # Light theme color palette
                 "bg": "#FFFFFF",
                 "panel": "#F0F0F0",
                 "accent": "#007ACC",
@@ -58,10 +90,15 @@ class CapstoneMapperApp:
                 "button_bg": "#CCCCCC",
                 "button_active": "#AAAAAA",
                 "output_bg": "#F9F9F9",
+                # Light blue highlight for active buttons in light mode
                 "active_bg": "#4DA6FF"
             }
         }
+        
+        # Default to dark theme on startup
         self.current_theme = "dark"
+        
+        # Configure main window
         master.title("Capstone Placement App")
         master.geometry("980x760")
         master.configure(bg=self.themes[self.current_theme]["bg"])
@@ -97,6 +134,14 @@ class CapstoneMapperApp:
         self._build_output_panel(right)
 
     def _build_input_panel(self, container: tk.Frame) -> None:
+        """Build the left input panel containing project and student entry fields.
+        
+        Creates text areas for entering project capacities and student rankings,
+        along with buttons for importing from CSV and running the assignment.
+        
+        Args:
+            container: The parent frame to place the input panel in.
+        """
         label = tk.Label(
             container,
             text="Project Capacities",
@@ -220,6 +265,14 @@ class CapstoneMapperApp:
         save_button.pack(side="left")
 
     def _build_output_panel(self, container: tk.Frame) -> None:
+        """Build the right output panel for displaying assignment results.
+        
+        Creates a read-only text area where assignment results are displayed
+        and from which students can copy results.
+        
+        Args:
+            container: The parent frame to place the output panel in.
+        """
         label = tk.Label(
             container,
             text="Assignment Results",
@@ -244,15 +297,35 @@ class CapstoneMapperApp:
         self.output_text.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
     def set_output(self, content: str) -> None:
+        """Update the output text area with new content.
+        
+        Temporarily enables the text area (which is normally read-only),
+        clears old content, inserts new content, and re-disables editing.
+        
+        Args:
+            content: The text to display in the output panel.
+        """
         self.output_text.config(state="normal")
         self.output_text.delete("1.0", tk.END)
         self.output_text.insert(tk.END, content)
         self.output_text.config(state="disabled")
 
     def clear_output(self) -> None:
+        """Clear the output panel by setting it to empty text."""
         self.set_output("")
 
     def _load_csv_file(self, title: str) -> list[dict[str, str]]:
+        """Open a file dialog and load a CSV file.
+        
+        Prompts the user to select a CSV file, reads it, and returns the
+        data as a list of dictionaries (one per row). Filters out empty rows.
+        
+        Args:
+            title: The title to display in the file dialog.
+        
+        Returns:
+            List of dictionaries representing CSV rows, or empty list if cancelled.
+        """
         path = filedialog.askopenfilename(
             title=title,
             filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
@@ -270,6 +343,11 @@ class CapstoneMapperApp:
             raise AssignmentError(f"Could not read CSV file: {error}")
 
     def load_projects_csv(self) -> None:
+        """Load project data from a CSV file.
+        
+        Opens a file dialog, reads project and capacity columns, and populates
+        the projects text area. Handles header detection and formatting.
+        """
         try:
             rows = self._load_csv_file("Import project capacities from CSV")
             if not rows:
@@ -293,6 +371,11 @@ class CapstoneMapperApp:
             messagebox.showerror("Import Error", str(error))
 
     def load_students_csv(self) -> None:
+        """Load student data from a CSV file.
+        
+        Opens a file dialog, reads student names and ranking columns, and populates
+        the students text area. Handles header detection and formatting.
+        """
         try:
             rows = self._load_csv_file("Import student rankings from CSV")
             if not rows:
@@ -316,6 +399,12 @@ class CapstoneMapperApp:
             messagebox.showerror("Import Error", str(error))
 
     def run_assignment(self) -> None:
+        """Parse input, run the assignment algorithm, and display results.
+        
+        Extracts project and student data from the input panels, validates them,
+        runs the assignment algorithm, and displays results in the output panel.
+        Shows error messages for any validation or processing issues.
+        """
         project_text = self.projects_text.get("1.0", tk.END)
         student_text = self.students_text.get("1.0", tk.END)
         try:
@@ -332,6 +421,14 @@ class CapstoneMapperApp:
             messagebox.showerror("Unexpected Error", str(error))
 
     def save_csv(self) -> None:
+        """Save assignment results to a CSV file.
+        
+        Opens a file save dialog and exports the current assignments to CSV format.
+        Each row contains the student name, assigned project, and the rank of their
+        assignment relative to their preferences.
+        
+        Shows a warning if no assignments have been run yet.
+        """
         if not self.last_assignments:
             messagebox.showwarning("No Output", "Run the assignment before saving a CSV file.")
             return
@@ -355,5 +452,9 @@ class CapstoneMapperApp:
             messagebox.showerror("Save Error", str(error))
 
     def toggle_theme(self) -> None:
-        """Toggle between dark and light themes."""
+        """Toggle between dark and light themes.
+        
+        Switches the application color scheme from dark to light or vice versa.
+        This method is a placeholder for theme switching functionality.
+        """
         self.current_theme = "light" if self.current_theme == "dark" else "dark"

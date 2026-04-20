@@ -1,20 +1,26 @@
 # DataDivas
 
-DataDivas is a desktop Python app that helps the ECCS chair map students to capstone projects using student-ranked project preferences.
+DataDivas is a desktop Python app that helps the ECCS chair map students to capstone projects using student-ranked project preferences. It implements a proposal-based matching algorithm to optimize assignment quality while respecting project capacity constraints.
 
 ## What it does
 
-- Accepts a list of projects with capacities from 4 to 6 students per project.
-- Accepts student preference rankings for those projects.
-- Computes a capacity-aware assignment that seeks to honor each student's top choices.
-- Provides a desktop GUI with results and CSV export.
+- **Accepts project data**: List of projects with capacities constrained to 4-6 students per project (enforced by ECCS guidelines).
+- **Accepts student preferences**: Student rankings for projects in order of preference.
+- **Computes optimal assignments**: Uses a proposal-based algorithm (similar to stable matching) to honor student preferences while respecting capacity limits.
+- **Validates all input**: Ensures consistent data format, prevents duplicates, and requires valid capacity ranges.
+- **Provides an intuitive GUI**: Desktop interface for entering data, viewing results, and exporting assignments.
+- **Exports results**: Save assignment results to CSV with each student's assigned project and how well it matched their preferences.
 
 ## Features
 
-- Standard-library Python implementation with no third-party dependencies.
-- Tkinter desktop interface that runs on Windows and most standard Python installations.
-- Robust validation and reusable assignment logic in `datadivas/assignment.py`.
-- Unit tests under `tests/test_assignment.py`.
+- **Standard-library only**: No third-party dependencies—uses only Python standard library (tkinter, csv, difflib).
+- **Cross-platform GUI**: Tkinter interface runs on Windows, macOS, and Linux.
+- **Robust validation**: Comprehensive input validation with clear error messages for common issues.
+- **Multiple import formats**: Load project and student data from CSV files or enter manually.
+- **Preference tracking**: CSV export shows how well each student's assignment matches their ranked preferences.
+- **Capacity enforcement**: Ensures no project exceeds its capacity and maintains minimum team size of 4 students.
+- **Theme support**: Choose between dark and light color schemes in the GUI.
+- **Comprehensive testing**: Unit tests cover parsing logic, validation, and assignment correctness.
 
 ## Getting started
 

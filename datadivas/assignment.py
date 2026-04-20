@@ -1,20 +1,48 @@
+"""Core assignment logic for the DataDivas project mapper.
+
+This module implements the student-to-project assignment algorithm,
+which uses a proposal-based matching model similar to stable matching.
+It includes input parsing, validation, and report generation.
+"""
+
 from collections import deque
 from typing import Dict, List, Optional
 import difflib
-
-"""Core assignment logic for the DataDivas project mapper."""
 
 class AssignmentError(ValueError):
     pass
 
 
 def normalize_name(name: str) -> str:
-    """Trim whitespace and normalize names in input text."""
+    """Trim whitespace and normalize names in input text.
+    
+    Ensures consistent handling of user input by removing leading/trailing spaces,
+    which is critical for matching student rankings to project names.
+    
+    Args:
+        name: Raw input string to normalize.
+    
+    Returns:
+        Trimmed string with no leading or trailing whitespace.
+    """
     return name.strip()
 
 
 def find_closest_project(choice: str, projects: List[str], cutoff: float = 0.8) -> Optional[str]:
-    """Find the closest matching project name using difflib."""
+    """Find the closest matching project name using difflib.
+    
+    Uses fuzzy string matching to suggest the correct project name if a student
+    misspells or slightly misnames a project. Returns None if no match exceeds
+    the confidence threshold.
+    
+    Args:
+        choice: The project name to match (as entered by student).
+        projects: List of valid project names.
+        cutoff: Minimum confidence score (0.0-1.0) for a match to be returned.
+    
+    Returns:
+        The closest matching project name, or None if no good match found.
+    """
     choice = normalize_name(choice)
     matches = difflib.get_close_matches(choice, projects, n=1, cutoff=cutoff)
     return matches[0] if matches else None
@@ -52,7 +80,7 @@ def parse_projects(project_text: str) -> Dict[str, int]:
         projects[name] = capacity
     if not projects:
         raise AssignmentError("At least one project must be provided.")
-    return projects
+    return projects  # Return the validated projects dictionary
 
 
 def parse_student_rankings(student_text: str) -> Dict[str, List[str]]:
@@ -77,11 +105,22 @@ def parse_student_rankings(student_text: str) -> Dict[str, List[str]]:
         students[name] = choices
     if not students:
         raise AssignmentError("At least one student must be provided.")
-    return students
+    return students  # Return the validated student rankings dictionary
 
 
 def get_rank(assigned: Optional[str], rankings: List[str]) -> str:
-    """Get the rank of the assigned project in the student's rankings."""
+    """Get the rank of the assigned project in the student's rankings.
+    
+    Used in CSV export to show how well the assignment matched each student's
+    preferences (e.g., "Choice #1" for top choice, "Choice #2" for second, etc.).
+    
+    Args:
+        assigned: The project the student was assigned to, or None if unassigned.
+        rankings: The student's ranked list of project preferences.
+    
+    Returns:
+        A string describing the rank ("Choice #N") or "Not in rankings" if not found.
+    """
     if assigned and assigned in rankings:
         idx = rankings.index(assigned) + 1
         return f"Choice #{idx}"
@@ -113,9 +152,11 @@ def assign_students_to_projects(
             "Unrecognized projects in student rankings: " + ", ".join(sorted(invalid_projects))
         )
 
+    # Sort projects for consistent ordering in comparisons
     all_projects = sorted(project_capacities.keys())
 
     # Record how each student ranks each project so we can compare preferences.
+    # This is used later to determine which students are the best fit for each project.
     preference_rank = {
         student: {project: idx for idx, project in enumerate(ranking)}
         for student, ranking in student_rankings.items()
@@ -134,10 +175,16 @@ def assign_students_to_projects(
     free_students = deque(student_rankings.keys())
 
     def project_value(student: str, project: str) -> int:
+        """Calculate how much a student values a project.
+        
+        Lower values indicate higher preference. Students not ranking a project
+        receive the lowest value (least preferred).
+        """
         return preference_rank[student].get(project, len(all_projects))
 
     # Use a proposal loop similar to Gale-Shapley stable matching.
     # Each student proposes to their next available project until placed or out of options.
+    # This ensures projects are filled with students who prefer them most.
     while free_students:
         student = free_students.popleft()
         if proposals[student] >= len(extended_rankings[student]):
@@ -146,12 +193,15 @@ def assign_students_to_projects(
         proposals[student] += 1
         project_assignments[project].append(student)
 
+        # If a project exceeds capacity, remove the student who values it least
         if len(project_assignments[project]) > project_capacities[project]:
+            # Find the student with the lowest preference for this project
             worst_student = max(
                 project_assignments[project],
                 key=lambda name: (project_value(name, project), name),
             )
             project_assignments[project].remove(worst_student)
+            # Make the displaced student free to try another project
             if worst_student != student:
                 free_students.append(worst_student)
             if proposals[worst_student] < len(extended_rankings[worst_student]):
@@ -160,7 +210,8 @@ def assign_students_to_projects(
         if student in project_assignments[project] and len(project_assignments[project]) <= project_capacities[project]:
             continue
 
-    # Final check: move students out of projects that are under the minimum team size.
+    # Final validation: enforce minimum team size of 4 students per project.
+    # If a project has fewer than 4 students, redistribute them to other projects.
     for project, assigned_students in list(project_assignments.items()):
         if 0 < len(assigned_students) < 4:
             for student in list(assigned_students):
@@ -183,10 +234,20 @@ def assign_students_to_projects(
 def build_report(assignments: Dict[str, Optional[str]]) -> str:
     """Build a report grouped by project for the GUI output panel.
 
+    Formats the assignment results for easy reading in the GUI. Students are
+    grouped by assigned project, with an "Unassigned" section for students
+    who could not be placed.
+    
     Format:
         Project Name: Student1, Student2, Student3
         Another Project: Student4, Student5
         Unassigned: Student6
+    
+    Args:
+        assignments: Dictionary mapping student names to assigned project names.
+    
+    Returns:
+        Formatted report string ready for display in the GUI.
     """
     by_project: Dict[str, list[str]] = {}
     for student, project in assignments.items():
