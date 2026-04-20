@@ -1,5 +1,6 @@
 from collections import deque
 from typing import Dict, List, Optional
+import difflib
 
 """Core assignment logic for the DataDivas project mapper."""
 
@@ -10,6 +11,13 @@ class AssignmentError(ValueError):
 def normalize_name(name: str) -> str:
     """Trim whitespace and normalize names in input text."""
     return name.strip()
+
+
+def find_closest_project(choice: str, projects: List[str], cutoff: float = 0.8) -> Optional[str]:
+    """Find the closest matching project name using difflib."""
+    choice = normalize_name(choice)
+    matches = difflib.get_close_matches(choice, projects, n=1, cutoff=cutoff)
+    return matches[0] if matches else None
 
 
 def parse_projects(project_text: str) -> Dict[str, int]:
@@ -70,6 +78,14 @@ def parse_student_rankings(student_text: str) -> Dict[str, List[str]]:
     if not students:
         raise AssignmentError("At least one student must be provided.")
     return students
+
+
+def get_rank(assigned: Optional[str], rankings: List[str]) -> str:
+    """Get the rank of the assigned project in the student's rankings."""
+    if assigned and assigned in rankings:
+        idx = rankings.index(assigned) + 1
+        return f"Choice #{idx}"
+    return "Not in rankings"
 
 
 def assign_students_to_projects(

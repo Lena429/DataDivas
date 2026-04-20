@@ -2,7 +2,7 @@ import csv
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 
-from .assignment import AssignmentError, assign_students_to_projects, build_report, parse_projects, parse_student_rankings
+from .assignment import AssignmentError, assign_students_to_projects, build_report, get_rank, parse_projects, parse_student_rankings
 
 SAMPLE_PROJECTS = """Project Apollo,4
 Project Atlas,4
@@ -15,13 +15,6 @@ Ben: Project Atlas, Project Cypress, Project Apollo
 Carmen: Project Beacon, Project Apollo, Project Atlas
 Diana: Project Cypress, Project Atlas, Project Apollo
 """
-
-STYLE_BG = "#111111"
-STYLE_PANEL = "#1A1A1A"
-STYLE_ACCENT = "#FF9500"
-STYLE_TEXT = "#FFFFFF"
-STYLE_INPUT_BG = "#FFFFFF"
-STYLE_INPUT_FG = "#000000"
 
 
 def _choose_header_key(field_names, candidates):
@@ -38,16 +31,47 @@ class CapstoneMapperApp:
     def __init__(self, master: tk.Tk) -> None:
         self.master = master
         self.last_assignments: Dict[str, str | None] = {}
+        self.last_students: Dict[str, List[str]] = {}
+        #dark light modes
+        self.themes = {
+            "dark": {
+                "bg": "#111111",
+                "panel": "#1A1A1A",
+                "accent": "#FF9500",
+                "text": "#FFFFFF",
+                "input_bg": "#FFFFFF",
+                "input_fg": "#000000",
+                "subtitle_fg": "#DDDDDD",
+                "button_bg": "#333333",
+                "button_active": "#4D4D4D",
+                "output_bg": "#121212",
+                "active_bg": "#FFB340"
+            },
+            "light": {
+                "bg": "#FFFFFF",
+                "panel": "#F0F0F0",
+                "accent": "#007ACC",
+                "text": "#000000",
+                "input_bg": "#FFFFFF",
+                "input_fg": "#000000",
+                "subtitle_fg": "#666666",
+                "button_bg": "#CCCCCC",
+                "button_active": "#AAAAAA",
+                "output_bg": "#F9F9F9",
+                "active_bg": "#4DA6FF"
+            }
+        }
+        self.current_theme = "dark"
         master.title("Capstone Placement App")
         master.geometry("980x760")
-        master.configure(bg=STYLE_BG)
+        master.configure(bg=self.themes[self.current_theme]["bg"])
 
         header = tk.Label(
             master,
             text="Capstone Placement App",
             font=("Segoe UI", 20, "bold"),
-            bg=STYLE_BG,
-            fg=STYLE_TEXT,
+            bg=self.themes[self.current_theme]["bg"],
+            fg=self.themes[self.current_theme]["text"],
         )
         header.pack(padx=16, pady=(12, 6))
 
@@ -55,18 +79,18 @@ class CapstoneMapperApp:
             master,
             text="Use ranked student preferences and project capacities to generate team placement suggestions.",
             font=("Segoe UI", 10),
-            bg=STYLE_BG,
-            fg="#DDDDDD",
+            bg=self.themes[self.current_theme]["bg"],
+            fg=self.themes[self.current_theme]["subtitle_fg"],
         )
         subtitle.pack(padx=16, pady=(0, 16))
 
-        frame = tk.Frame(master, bg=STYLE_BG)
+        frame = tk.Frame(master, bg=self.themes[self.current_theme]["bg"])
         frame.pack(fill="both", expand=True, padx=16, pady=6)
 
-        left = tk.Frame(frame, bg=STYLE_PANEL, bd=0, relief="flat")
+        left = tk.Frame(frame, bg=self.themes[self.current_theme]["panel"], bd=0, relief="flat")
         left.pack(side="left", fill="both", expand=True, padx=(0, 8), pady=2)
 
-        right = tk.Frame(frame, bg=STYLE_PANEL, bd=0, relief="flat")
+        right = tk.Frame(frame, bg=self.themes[self.current_theme]["panel"], bd=0, relief="flat")
         right.pack(side="right", fill="both", expand=True, pady=2)
 
         self._build_input_panel(left)
@@ -77,8 +101,8 @@ class CapstoneMapperApp:
             container,
             text="Project Capacities",
             font=("Segoe UI", 12, "bold"),
-            bg=STYLE_PANEL,
-            fg=STYLE_ACCENT,
+            bg=self.themes[self.current_theme]["panel"],
+            fg=self.themes[self.current_theme]["accent"],
         )
         label.pack(anchor="w", padx=12, pady=(12, 6))
 
@@ -86,8 +110,8 @@ class CapstoneMapperApp:
             container,
             wrap="word",
             height=10,
-            bg=STYLE_INPUT_BG,
-            fg=STYLE_INPUT_FG,
+            bg=self.themes[self.current_theme]["input_bg"],
+            fg=self.themes[self.current_theme]["input_fg"],
             font=("Segoe UI", 10),
             relief="flat",
             padx=8,
@@ -96,16 +120,16 @@ class CapstoneMapperApp:
         self.projects_text.pack(fill="both", expand=True, padx=12)
         self.projects_text.insert("1.0", SAMPLE_PROJECTS)
 
-        loader_frame = tk.Frame(container, bg=STYLE_PANEL)
+        loader_frame = tk.Frame(container, bg=self.themes[self.current_theme]["panel"])
         loader_frame.pack(fill="x", padx=12, pady=(8, 0))
 
         project_import_button = tk.Button(
             loader_frame,
             text="Import Projects CSV",
             command=self.load_projects_csv,
-            bg=STYLE_ACCENT,
-            fg=STYLE_TEXT,
-            activebackground="#FFB340",
+            bg=self.themes[self.current_theme]["accent"],
+            fg=self.themes[self.current_theme]["text"],
+            activebackground=self.themes[self.current_theme]["active_bg"],
             relief="flat",
             padx=10,
             pady=6,
@@ -116,16 +140,16 @@ class CapstoneMapperApp:
             container,
             text="Student Rankings",
             font=("Segoe UI", 12, "bold"),
-            bg=STYLE_PANEL,
-            fg=STYLE_ACCENT,
+            bg=self.themes[self.current_theme]["panel"],
+            fg=self.themes[self.current_theme]["accent"],
         ).pack(anchor="w", padx=12, pady=(16, 6))
 
         self.students_text = scrolledtext.ScrolledText(
             container,
             wrap="word",
             height=12,
-            bg=STYLE_INPUT_BG,
-            fg=STYLE_INPUT_FG,
+            bg=self.themes[self.current_theme]["input_bg"],
+            fg=self.themes[self.current_theme]["input_fg"],
             font=("Segoe UI", 10),
             relief="flat",
             padx=8,
@@ -134,32 +158,32 @@ class CapstoneMapperApp:
         self.students_text.pack(fill="both", expand=True, padx=12)
         self.students_text.insert("1.0", SAMPLE_STUDENTS)
 
-        student_import_frame = tk.Frame(container, bg=STYLE_PANEL)
+        student_import_frame = tk.Frame(container, bg=self.themes[self.current_theme]["panel"])
         student_import_frame.pack(fill="x", padx=12, pady=(8, 0))
 
         student_import_button = tk.Button(
             student_import_frame,
             text="Import Students CSV",
             command=self.load_students_csv,
-            bg=STYLE_ACCENT,
-            fg=STYLE_TEXT,
-            activebackground="#FFB340",
+            bg=self.themes[self.current_theme]["accent"],
+            fg=self.themes[self.current_theme]["text"],
+            activebackground=self.themes[self.current_theme]["active_bg"],
             relief="flat",
             padx=10,
             pady=6,
         )
         student_import_button.pack(side="left")
 
-        button_frame = tk.Frame(container, bg=STYLE_PANEL)
+        button_frame = tk.Frame(container, bg=self.themes[self.current_theme]["panel"])
         button_frame.pack(fill="x", padx=12, pady=14)
 
         assign_button = tk.Button(
             button_frame,
             text="Run Assignment",
             command=self.run_assignment,
-            bg=STYLE_ACCENT,
-            fg=STYLE_TEXT,
-            activebackground="#FFB340",
+            bg=self.themes[self.current_theme]["accent"],
+            fg=self.themes[self.current_theme]["text"],
+            activebackground=self.themes[self.current_theme]["active_bg"],
             width=16,
             relief="flat",
             padx=10,
@@ -171,9 +195,9 @@ class CapstoneMapperApp:
             button_frame,
             text="Clear Output",
             command=self.clear_output,
-            bg="#333333",
-            fg=STYLE_TEXT,
-            activebackground="#4D4D4D",
+            bg=self.themes[self.current_theme]["button_bg"],
+            fg=self.themes[self.current_theme]["text"],
+            activebackground=self.themes[self.current_theme]["button_active"],
             width=14,
             relief="flat",
             padx=10,
@@ -185,9 +209,9 @@ class CapstoneMapperApp:
             button_frame,
             text="Save CSV",
             command=self.save_csv,
-            bg="#333333",
-            fg=STYLE_TEXT,
-            activebackground="#4D4D4D",
+            bg=self.themes[self.current_theme]["button_bg"],
+            fg=self.themes[self.current_theme]["text"],
+            activebackground=self.themes[self.current_theme]["button_active"],
             width=12,
             relief="flat",
             padx=10,
@@ -200,8 +224,8 @@ class CapstoneMapperApp:
             container,
             text="Assignment Results",
             font=("Segoe UI", 12, "bold"),
-            bg=STYLE_PANEL,
-            fg=STYLE_ACCENT,
+            bg=self.themes[self.current_theme]["panel"],
+            fg=self.themes[self.current_theme]["accent"],
         )
         label.pack(anchor="w", padx=12, pady=(12, 6))
 
@@ -209,8 +233,8 @@ class CapstoneMapperApp:
             container,
             wrap="word",
             height=34,
-            bg="#121212",
-            fg=STYLE_TEXT,
+            bg=self.themes[self.current_theme]["output_bg"],
+            fg=self.themes[self.current_theme]["text"],
             font=("Segoe UI", 10),
             relief="flat",
             padx=8,
@@ -297,6 +321,7 @@ class CapstoneMapperApp:
         try:
             projects = parse_projects(project_text)
             students = parse_student_rankings(student_text)
+            self.last_students = students
             assignments = assign_students_to_projects(students, projects)
             self.last_assignments = assignments
             report = build_report(assignments)
@@ -320,10 +345,15 @@ class CapstoneMapperApp:
         try:
             with open(path, "w", newline="", encoding="utf-8") as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(["Student", "Assigned Project"])
+                writer.writerow(["Student", "Assigned Project", "Rank Assigned"])
                 for student in sorted(self.last_assignments.keys()):
                     project = self.last_assignments[student]
-                    writer.writerow([student, project or "Unassigned"])
+                    rank = get_rank(project, self.last_students[student])
+                    writer.writerow([student, project or "Unassigned", rank])
             messagebox.showinfo("Saved", f"Assignment results saved to {path}")
         except OSError as error:
             messagebox.showerror("Save Error", str(error))
+
+    def toggle_theme(self) -> None:
+        """Toggle between dark and light themes."""
+        self.current_theme = "light" if self.current_theme == "dark" else "dark"
