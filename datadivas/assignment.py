@@ -144,6 +144,17 @@ def assign_students_to_projects(
         if student in project_assignments[project] and len(project_assignments[project]) <= project_capacities[project]:
             continue
 
+    # Final check: move students out of projects that are under the minimum team size.
+    for project, assigned_students in list(project_assignments.items()):
+        if 0 < len(assigned_students) < 4:
+            for student in list(assigned_students):
+                project_assignments[project].remove(student)
+                current_index = extended_rankings[student].index(project)
+                for next_project in extended_rankings[student][current_index + 1 :]:
+                    if len(project_assignments[next_project]) < project_capacities[next_project]:
+                        project_assignments[next_project].append(student)
+                        break
+
     return {
         student: next(
             (project for project, assigned in project_assignments.items() if student in assigned),
